@@ -10,10 +10,10 @@ sound sound_init(const char* filename) {
     return (sound) {.filename=filename, .wav_file=wav_file};
 }
 
-void sound_load(const sound *_sound)
+void sound_load(sound *_sound)
 {
-    if(!wav_parse_file(_sound->filename, _sound->wav_file)) {
+    if(!wav_parse_file(_sound->filename, &_sound->wav_file)) {
         exit(EXIT_FAILURE);
     }
-    
+
 }

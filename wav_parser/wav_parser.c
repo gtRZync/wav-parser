@@ -43,8 +43,19 @@ void wav_print_header(const wav_header_t* header) {
     printf(CYAN "---------------------------\n" RESET);
 }
 
-static bool wav_validate_file(const char* filename) {
-
+static bool wav_validate_filename(const char* path) {
+    const char* EXTENSION = ".wav";
+    bool retval = true;
+    
+    const char* file = strrchr(path, '/');
+    const char* filename = (file == NULL) ? strrchr(path, '\\') : file;
+    
+    const char* dot = strrchr(filename, '.');
+    
+    if(strcmp(dot, EXTENSION) != 0) {
+        retval = false;
+    }
+    return retval;
 }
 
 static void read_text(char* buff, FILE* file) {
@@ -52,14 +63,20 @@ static void read_text(char* buff, FILE* file) {
     buff[4] = '\0';
 }
 
-bool wav_parse_file(const char *filename, wav_file_t* wav_file)
+bool wav_parse_file(const char *path, wav_file_t* wav_file)
 {
-    bool retval = true;
-    FILE* fp;
+    if(!wav_validate_filename(path)) {
+        const char* file = strrchr(path, '/');
+        const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1;
+        fprintf(stderr, RED "[ERROR] - Invalid file type." BLUE "'%s'" RED " is not a valid WAV file. Please provide a .wav file.\n" RESET, filename);
+        return false;
+    }
 
-    fp = fopen(filename, "rb");
+    FILE* fp;
+    bool retval = true;
+    fp = fopen(path, "rb");
     if(fp == NULL) {
-        fprintf(stderr,RED "[ERROR] - Failed to open file : %s\n" RESET, filename);
+        fprintf(stderr,RED "[ERROR] - Failed to open file : %s\n" RESET, path);
         fprintf(stderr, YELLOW "[INFO] - Cause : %s.\n" RESET, strerror(errno));
         retval = false;
         goto CLOSE_FILE;
@@ -67,7 +84,7 @@ bool wav_parse_file(const char *filename, wav_file_t* wav_file)
 
     read_text(wav_file->header.RIFF, fp);
     if(strcmp((wav_file->header.RIFF), "RIFF") != 0) {
-        fprintf(stderr,RED "[ERROR] - %s's first 4 bytes should be \"RIFF\" but are : %s\n" RESET, filename, wav_file->header.RIFF);
+        fprintf(stderr,RED "[ERROR] - %s's first 4 bytes should be \"RIFF\" but are : %s\n" RESET, path, wav_file->header.RIFF);
         retval = false;
         goto CLOSE_FILE;
     }
@@ -76,21 +93,21 @@ bool wav_parse_file(const char *filename, wav_file_t* wav_file)
 
     read_text(wav_file->header.WAVE, fp);
     if(strcmp((wav_file->header.WAVE), "WAVE") != 0 ) {
-        fprintf(stderr,RED "[ERROR] - %s's 4 bytes should be \"WAVE\" but are : %s\n" RESET, filename, wav_file->header.WAVE);
+        fprintf(stderr,RED "[ERROR] - %s's 4 bytes should be \"WAVE\" but are : %s\n" RESET, path, wav_file->header.WAVE);
         retval = false;
         goto CLOSE_FILE;
     }
 
     read_text(wav_file->header.fmt, fp);
     if(strcmp((wav_file->header.fmt), "fmt ") != 0 ) {
-        fprintf(stderr,RED "[ERROR] - %s's 4 bytes should be \"fmt/0\" but are : %s\n" RESET, filename, wav_file->header.fmt);
+        fprintf(stderr,RED "[ERROR] - %s's 4 bytes should be \"fmt/0\" but are : %s\n" RESET, path, wav_file->header.fmt);
         retval = false;
         goto CLOSE_FILE;
     }
     fread(&wav_file->header.chunk_size, 4/* bytes */, 1, fp);
     fread(&wav_file->header.format_type, 2/* bytes */, 1, fp);
     if(wav_file->header.format_type != 1) {
-        fprintf(stderr,RED "[ERROR] - %s's format type should be 1, but is : %d\n" RESET, filename, wav_file->header.format_type);
+        fprintf(stderr,RED "[ERROR] - %s's format type should be 1, but is : %d\n" RESET, path, wav_file->header.format_type);
         retval = false;
         goto CLOSE_FILE;
     }
@@ -101,7 +118,7 @@ bool wav_parse_file(const char *filename, wav_file_t* wav_file)
     fread(&wav_file->header.block_align, 2/* bytes */, 1, fp);
     fread(&wav_file->header.bits_per_sample, 2/* bytes */, 1, fp);
     if(wav_file->header.bits_per_sample != 16) {
-        fprintf(stderr,RED "[ERROR] - %s's bits per sample should be 16, but is : %d\n" RESET, filename, wav_file->header.sample_rate);
+        fprintf(stderr,RED "[ERROR] - %s's bits per sample should be 16, but is : %d\n" RESET, path, wav_file->header.sample_rate);
         retval = false;
         goto CLOSE_FILE;
     }
@@ -139,6 +156,8 @@ bool wav_parse_file(const char *filename, wav_file_t* wav_file)
     }
     
     wav_file->samples = wav_file->data_length / wav_file->header.block_align;
+    const char* file = strrchr(path, '/');
+    const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1;
     fprintf(stdout, GREEN "\n[INFO] - %s parsed successfully!!!!\n\n" RESET, filename);
 CLOSE_FILE:
     fclose(fp);

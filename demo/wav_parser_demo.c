@@ -1,4 +1,4 @@
-#include "wav_parser/wav_parser.h"
+#include "wav_parser.h"
 
 int main(int argc, char const *argv[])
 {

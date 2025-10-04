@@ -7,4 +7,5 @@ typedef struct sound {
 } sound;
 
 sound sound_init(const char* filename);
-void  sound_load(const sound* _sound);
+void  sound_load(sound* _sound);
+void  sound_unload(sound* _sound);
