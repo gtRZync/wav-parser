@@ -162,6 +162,7 @@ void wav_free_file(wav_file_t *wav_file)
         fprintf(stdout, GREEN "\n[INFO] - Data section successfully freed!\n\n" RESET);
     } else {
         fprintf(stdout, YELLOW "\n[WARNING] - No free needed - Data block was not allocated.\n\n" RESET);
+        return;
     }
     wav_file->data_length = 0;
     wav_file->samples = 0;
