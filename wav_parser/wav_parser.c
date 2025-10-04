@@ -104,7 +104,6 @@ bool parseWAVFile(const char *filename, WAVFile* wavFile)
         goto CLOSE_FILE;
     }
 
-    //TODO: loop to avoid section that aren't data
     while (fread(wavFile->header.data, 1, 4, fp) == 4) {
         int32_t chunkSize = 0;
         
@@ -115,7 +114,7 @@ bool parseWAVFile(const char *filename, WAVFile* wavFile)
 
         if (strncmp(wavFile->header.data, "data", 4) == 0) {
             wavFile->header.data_size = chunkSize;
-            break;  // found the data chunk
+            break; 
         } else {
             // Skip over this chunk's data
             fseek(fp, chunkSize, SEEK_CUR);
@@ -132,7 +131,7 @@ bool parseWAVFile(const char *filename, WAVFile* wavFile)
     }
 
     if(fread(wavFile->data, 1, wavFile->data_length, fp) != wavFile->data_length) {
-        fprintf(stderr,RED "[ERROR] - Failed to read data's bytes.\n" RESET, filename, wavFile->header.sample_rate);
+        fprintf(stderr,RED "[ERROR] - Failed to read data's bytes.\n" RESET);
         retval = false;
         goto CLOSE_FILE;
     }

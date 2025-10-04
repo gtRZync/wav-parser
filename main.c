@@ -5,6 +5,7 @@ int main(int argc, char const *argv[])
     WAVFile file;
     parseWAVFile("resources/FlappyBird_Menu.wav", &file);
     print_wav_header(&file.header);
-    free(file.data);
+    if(file.data)
+        free(file.data);
     return 0;
 }
