@@ -13,14 +13,15 @@ supports skipping extra metadata chunks (like `smpl`, `LIST`), and extracts audi
 ## Usage Example 
 
 ```c
-#include "wav_parser/wav_parser.h"
+#include "wav_parser.h"
 
 int main(int argc, char const *argv[])
 {
     wav_file_t file;
     wav_init_file(&file);
-    wav_parse_file("resources/FlappyBird_Menu.wav", &file);
-    wav_print_header(&file.header);
+    if(wav_parse_file("resources/FlappyBird_Menu.wav", &file)) {
+        wav_print_header(&file.header);
+    }
     wav_free_file(&file);
     return 0;
 }
@@ -28,9 +29,13 @@ int main(int argc, char const *argv[])
 
 ## Example Output
 
-| Terminal Output                                           |
+| Terminal Success Output                               |
 |-------------------------------------------------------|
-| ![Demo](resources/demo.png) |
+| ![Demo](resources/demo.png)                           |
+
+| Terminal Error Output                                 |
+|-------------------------------------------------------|
+| ![Error](resources/not_a_wav_err.png)                 |
 
 ## License
 
