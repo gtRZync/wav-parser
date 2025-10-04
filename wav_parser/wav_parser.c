@@ -52,7 +52,7 @@ static void read_text(char* buff, FILE* file) {
 
 bool parseWAVFile(const char *filename, WAVFile* wavFile)
 {
-    bool retval = false;
+    bool retval = true;
     FILE* fp;
 
     fp = fopen(filename, "rb");
