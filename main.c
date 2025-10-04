@@ -2,10 +2,10 @@
 
 int main(int argc, char const *argv[])
 {
-    WAVFile file;
-    parseWAVFile("resources/FlappyBird_Menu.wav", &file);
-    print_wav_header(&file.header);
-    if(file.data)
-        free(file.data);
+    wav_file_t file = {0};
+    wav_init_file(&file);
+    wav_parse_file("resources/FlappyBird_Menu.wav", &file);
+    wav_print_header(&file.header);
+    wav_free_file(&file);
     return 0;
 }

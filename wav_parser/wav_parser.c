@@ -1,7 +1,7 @@
 #include "wav_parser.h"
 #include <errno.h>
 
-void print_wav_header(const WAV_HEADER* header) {
+void wav_print_header(const wav_header_t* header) {
     printf(CYAN "----- WAV Header Info -----\n" RESET);
     
     printf(GREEN "ChunkID: " RESET "%.4s\n", header->RIFF);
@@ -43,14 +43,16 @@ void print_wav_header(const WAV_HEADER* header) {
     printf(CYAN "---------------------------\n" RESET);
 }
 
+static bool wav_validate_file(const char* filename) {
 
+}
 
 static void read_text(char* buff, FILE* file) {
     fread(buff, 4, 1, file);
     buff[4] = '\0';
 }
 
-bool parseWAVFile(const char *filename, WAVFile* wavFile)
+bool wav_parse_file(const char *filename, wav_file_t* wavFile)
 {
     bool retval = true;
     FILE* fp;
@@ -137,8 +139,32 @@ bool parseWAVFile(const char *filename, WAVFile* wavFile)
     }
     
     wavFile->samples = wavFile->data_length / wavFile->header.block_align;
-    fprintf(stdout, GREEN "[INFO] - %s parsed successfully!!!!\n" RESET, filename);
+    fprintf(stdout, GREEN "\n[INFO] - %s parsed successfully!!!!\n\n" RESET, filename);
 CLOSE_FILE:
     fclose(fp);
     return retval;
 }
+
+void wav_init_file(wav_file_t* wav_file) {
+    if(wav_file) {
+        memset(wav_file, 0, sizeof(*wav_file));
+        memset(&wav_file->header, 0, sizeof(wav_header_t));
+    }
+}
+
+void wav_free_file(wav_file_t *wav_file)
+{
+    if (!wav_file) return;
+
+    if (wav_file->data != NULL) {
+        free(wav_file->data);
+        wav_file->data = NULL; 
+        fprintf(stdout, GREEN "\n[INFO] - Data section successfully freed!\n\n" RESET);
+    } else {
+        fprintf(stdout, YELLOW "\n[WARNING] - No free needed - Data block was not allocated.\n\n" RESET);
+    }
+    wav_file->data_length = 0;
+    wav_file->samples = 0;
+    memset(&wav_file->header, 0, sizeof(wav_header_t));
+}
+

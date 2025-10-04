@@ -12,7 +12,7 @@
 #define CYAN    "\e[1;36m"
 #define RESET   "\e[0m"
 
-typedef struct WAV_HEADER {
+typedef struct wav_header_t {
     char RIFF[5];
     int32_t file_size;
     char WAVE[5];
@@ -26,18 +26,20 @@ typedef struct WAV_HEADER {
     int16_t bits_per_sample;
     char data[5];               // "data"
     int32_t data_size;        //? size of the data section in bytes
-} WAV_HEADER;
+} wav_header_t;
 
-typedef struct WAVFile_t
+typedef struct wav_file_t
 {
-    WAV_HEADER header;
+    wav_header_t header;
     uint8_t* data;
     int32_t data_length;
     int32_t samples;
-}WAVFile;
+}wav_file_t;
 
-bool parseWAVFile(const char* filename, WAVFile* file);
-void print_wav_header(const WAV_HEADER* header);
+void wav_init_file(wav_file_t* wav_file) ;
+void wav_free_file(wav_file_t* wav_file);
+bool wav_parse_file(const char* filename, wav_file_t* wav_file);
+void wav_print_header(const wav_header_t* header);
 
 
 
