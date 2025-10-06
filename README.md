@@ -1,7 +1,6 @@
-# Simple WAV File Parser in C
+# Simple WAV File Parser and Player in C
 
-A lightweight WAV file parser written in C that reads standard RIFF/WAV headers,
-supports skipping extra metadata chunks (like `smpl`, `LIST`), and extracts audio data info.
+`c-wav-player` is a lightweight WAV file parser and Win32 sound player written in C. It reads standard RIFF/WAV headers, skips non-audio metadata chunks (such as smpl, LIST, etc.), and extracts raw PCM audio data for playback via the Windows waveOut API.
 
 ## Features
 
@@ -39,7 +38,7 @@ int main(int argc, char const *argv[])
     sound snd = sound_init("resources/FlappyBird_Menu.wav");
     sound_load(&snd);
     play_sound(&snd);
-    sleep(41250); 
+    playsound_ui_demo(&snd);
     sound_unload(&snd);
     return 0;
 }
@@ -47,13 +46,26 @@ int main(int argc, char const *argv[])
 
 ## Example Output
 
-| Terminal Success Output                               |
+### WAV parser (header data display)
+
+|          Success Output                               |
 |-------------------------------------------------------|
 | ![Demo](resources/demo.png)                           |
 
-| Terminal Error Output                                 |
+|          Error Output                                 |
 |-------------------------------------------------------|
 | ![Error](resources/not_a_wav_err.png)                 |
+
+### Win32 Soundplayer(using the wav parser)
+
+|          Player Demo : Playing                        |
+|-------------------------------------------------------|
+| ![Demo](resources/player_demo.gif)                    |
+
+|          Player Demo : End                            |
+|-------------------------------------------------------|
+| ![Demo](resources/player_demo_end.png)                    |
+
 
 ## License
 
