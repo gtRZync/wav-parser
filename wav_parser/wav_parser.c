@@ -111,7 +111,7 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
     fread(&wav_file->header.chunk_size, 4/* bytes */, 1, fp);
     fread(&wav_file->header.format_type, 2/* bytes */, 1, fp);
     if(wav_file->header.format_type != 1) {
-        fprintf(stderr,RED "[ERROR] - %s's format type should be 1, but is : %d\n" RESET, path, wav_file->header.format_type);
+        fprintf(stderr,RED "[ERROR] - %s's format type should be 1(PCM), but is : %d\n" RESET, path, wav_file->header.format_type);
         retval = false;
         goto CLOSE_FILE;
     }

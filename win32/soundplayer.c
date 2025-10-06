@@ -8,11 +8,15 @@ struct state__ {
     wav_file_t wav_file;
     WAVEFORMATEX format;
     HWAVEOUT hWaveOut;
+    WAVEHDR waveHeader;
+    /*bool is_playing*/
 };
 
-static void WAVEFORMATEXinit(const sound* _sound) {
-    wav_file_t* wav_file = &_sound->state->wav_file;
-    WAVEFORMATEX* format = &_sound->state->format;
+static void WAVEFORMATEX_HDRinit(const sound* snd) {
+    wav_file_t* wav_file = &snd->state->wav_file;
+    WAVEFORMATEX* format = &snd->state->format;
+    WAVEHDR *wvHeader = &snd->state->waveHeader;
+    //---------------Format Section-------------------
     format->wFormatTag = WAVE_FORMAT_PCM;
     format->nChannels = wav_file->header.num_channels;
     format->nSamplesPerSec = wav_file->header.sample_rate;
@@ -20,39 +24,48 @@ static void WAVEFORMATEXinit(const sound* _sound) {
     format->nBlockAlign = wav_file->header.block_align;
     format->wBitsPerSample = wav_file->header.bits_per_sample;
     format->cbSize = 0; 
+    //---------------Header Section-------------------
+    wvHeader->lpData = snd->state->wav_file.data;
+    wvHeader->dwBufferLength = snd->state->wav_file.data_length; 
+}
+
+static void prepareSoundData(const sound* snd) {
+    waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, NULL, NULL, CALLBACK_NULL);
+    waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
 }
 
 sound sound_init(const char* file_path) {
     state s = (state)malloc(sizeof(struct state__));
     memset(s, 0, sizeof(struct state__));
-    s->hWaveOut = rand() % 256;
     return (sound) {.file_path=file_path, .state=s};
 }
 
-void sound_load(sound *_sound)
+void sound_load(sound *snd)
 {  
-    if(!wav_parse_file(_sound->file_path, &_sound->state->wav_file)) {
+    if(!wav_parse_file(snd->file_path, &snd->state->wav_file)) {
         exit(EXIT_FAILURE);
     }
-    WAVEFORMATEXinit(_sound);
-    waveOutOpen(&_sound->state->hWaveOut, WAVE_MAPPER, &_sound->state->format, NULL, NULL, CALLBACK_NULL);
-    WAVEHDR wvHeader = {0};
-    wvHeader.lpData = _sound->state->wav_file.data;
-    wvHeader.dwBufferLength = _sound->state->wav_file.data_length;
-    
+    WAVEFORMATEX_HDRinit(snd);
+    prepareSoundData(snd);
 }
 
-void sound_unload(sound *_sound)
+void sound_unload(sound *snd)
 {
-    if (!_sound) return;
+    if (!snd) return;
 
-    if (_sound->state != NULL) {
-        free(_sound->state);
-        _sound->state = NULL; 
+    if (snd->state != NULL) {
+        free(snd->state);
+        snd->state = NULL; 
         fprintf(stdout, GREEN "\n[INFO] - Sound state successfully unload!\n\n" RESET);
     } else {
         fprintf(stdout, YELLOW "\n[WARNING] - No free needed - Sound state was not allocated.\n\n" RESET);
         return;
     }
-    _sound->file_path = "";
+    snd->file_path = "";
+}
+
+void play_sound(sound *snd)
+{
+    /*is_playing check*/
+    waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
 }
