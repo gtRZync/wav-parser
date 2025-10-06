@@ -19,6 +19,7 @@ static void WAVEFORMATEXinit(const sound* _sound) {
     format->nAvgBytesPerSec = (wav_file->header.sample_rate * wav_file->header.block_align);
     format->nBlockAlign = wav_file->header.block_align;
     format->wBitsPerSample = wav_file->header.bits_per_sample;
+    format->cbSize = 0; 
 }
 
 sound sound_init(const char* file_path) {
@@ -34,6 +35,10 @@ void sound_load(sound *_sound)
         exit(EXIT_FAILURE);
     }
     WAVEFORMATEXinit(_sound);
+    waveOutOpen(&_sound->state->hWaveOut, WAVE_MAPPER, &_sound->state->format, NULL, NULL, CALLBACK_NULL);
+    WAVEHDR wvHeader = {0};
+    wvHeader.lpData = _sound->state->wav_file.data;
+    wvHeader.dwBufferLength = _sound->state->wav_file.data_length;
     
 }
 
