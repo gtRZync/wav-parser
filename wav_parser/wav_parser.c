@@ -58,7 +58,6 @@ static bool wav_validate_filename(const char* path) {
     if (left >= path && (*left == '\\' || *left == '/')) {
         return false;
     }
-    printf("left: %s\n", left);
 
     return strcmp(dot, EXTENSION) == 0;
 }
