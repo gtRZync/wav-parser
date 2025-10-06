@@ -45,17 +45,22 @@ void wav_print_header(const wav_header_t* header) {
 
 static bool wav_validate_filename(const char* path) {
     const char* EXTENSION = ".wav";
-    bool retval = true;
     
     const char* file = strrchr(path, '/');
     const char* filename = (file == NULL) ? strrchr(path, '\\') : file;
     
-    const char* dot = strrchr(filename, '.');
-    
-    if(strcmp(dot, EXTENSION) != 0) {
-        retval = false;
+    const char* dot = (filename == NULL) ? strrchr(path, '.') : strrchr(filename, '.');
+    if(!dot || dot == path) {
+        return false;
     }
-    return retval;
+    
+    const char *left = dot - 1;
+    if (left >= path && (*left == '\\' || *left == '/')) {
+        return false;
+    }
+    printf("left: %s\n", left);
+
+    return strcmp(dot, EXTENSION) == 0;
 }
 
 static void read_text(char* buff, FILE* file) {
