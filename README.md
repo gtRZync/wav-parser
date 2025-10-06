@@ -12,6 +12,8 @@ supports skipping extra metadata chunks (like `smpl`, `LIST`), and extracts audi
 
 ## Usage Example 
 
+### Wav Parser
+
 ```c
 #include "wav_parser.h"
 
@@ -23,6 +25,22 @@ int main(int argc, char const *argv[])
         wav_print_header(&file.header);
     }
     wav_free_file(&file);
+    return 0;
+}
+```
+
+### Win32 Soundplayer(using the wav parser)
+```c
+#include "win32/soundplayer.h"
+
+//temporary code 
+int main(int argc, char const *argv[])
+{
+    sound snd = sound_init("resources/FlappyBird_Menu.wav");
+    sound_load(&snd);
+    play_sound(&snd);
+    sleep(41250); 
+    sound_unload(&snd);
     return 0;
 }
 ```
