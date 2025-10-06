@@ -1,5 +1,5 @@
 #include "soundplayer.h"
-#include "wav_parser/wav_parser.h"
+#include "wav_parser.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <mmsystem.h>
@@ -9,7 +9,7 @@ struct state__ {
     WAVEFORMATEX format;
     HWAVEOUT hWaveOut;
     WAVEHDR waveHeader;
-    /*bool is_playing*/
+    bool is_playing;
 };
 
 static void WAVEFORMATEX_HDRinit(const sound* snd) {
@@ -30,7 +30,7 @@ static void WAVEFORMATEX_HDRinit(const sound* snd) {
 }
 
 static void prepareSoundData(const sound* snd) {
-    waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, NULL, NULL, CALLBACK_NULL);
+    waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, (DWORD_PTR)0, (DWORD_PTR)0, CALLBACK_NULL);
     waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
 }
 
@@ -52,11 +52,12 @@ void sound_load(sound *snd)
 void sound_unload(sound *snd)
 {
     if (!snd) return;
-
     if (snd->state != NULL) {
+        waveOutUnprepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
+        waveOutClose(snd->state->hWaveOut);
         free(snd->state);
         snd->state = NULL; 
-        fprintf(stdout, GREEN "\n[INFO] - Sound state successfully unload!\n\n" RESET);
+        fprintf(stdout, GREEN "\n[INFO] - Sound state successfully unloaded!\n\n" RESET);
     } else {
         fprintf(stdout, YELLOW "\n[WARNING] - No free needed - Sound state was not allocated.\n\n" RESET);
         return;
@@ -66,6 +67,13 @@ void sound_unload(sound *snd)
 
 void play_sound(sound *snd)
 {
-    /*is_playing check*/
-    waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
+    if(!snd->state->is_playing) {
+        waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
+        snd->state->is_playing = true;
+    }
+}
+
+void sleep(unsigned int milliseconds)
+{
+    Sleep(milliseconds);
 }
