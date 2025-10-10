@@ -37,13 +37,29 @@ static void prepareSoundData(const sound* snd) {
 
 sound sound_init(const char* file_path) {
     state s = (state)malloc(sizeof(struct state__));
+    if(!s) {
+        fprintf(stderr, COLOR_RED "[ERROR] - malloc failed to allocate memory for sound state\n" COLOR_RESET);
+        exit(EXIT_FAILURE);
+    }
     memset(s, 0, sizeof(struct state__));
-    return (sound) {.file_path=file_path, .state=s};
+    sound snd;
+    snd.file_path = NULL;
+    size_t len = strlen(file_path);
+    snd.file_path = (char*)malloc(len + 1);
+    if(!snd.file_path) {
+        fprintf(stderr, COLOR_RED "[ERROR] - malloc failed to allocate memory for file_path\n" COLOR_RESET);
+        free(s);
+        exit(EXIT_FAILURE);
+    }
+    strcpy(snd.file_path, file_path);
+    snd.state = s;
+    return snd;
 }
 
 void sound_load(sound *snd)
 {  
     if(!wav_parse_file(snd->file_path, &snd->state->wav_file)) {
+        sound_unload(snd);
         exit(EXIT_FAILURE);
     }
     WAVEFORMATEX_HDRinit(snd);
@@ -53,17 +69,22 @@ void sound_load(sound *snd)
 void sound_unload(sound *snd)
 {
     if (!snd) return;
-    if (snd->state != NULL) {
+    if(!snd->state && !snd->file_path) {
+        fprintf(stdout, COLOR_YELLOW "\n[WARNING] - No free needed - Sound wasn't initialized.\n\n" COLOR_RESET);
+        return;
+    }
+    if (snd->state) {
         waveOutUnprepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
         waveOutClose(snd->state->hWaveOut);
         free(snd->state);
         snd->state = NULL; 
-        fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound state successfully unloaded!\n\n" COLOR_RESET);
-    } else {
-        fprintf(stdout, COLOR_YELLOW "\n[WARNING] - No free needed - Sound state was not allocated.\n\n" COLOR_RESET);
-        return;
+        fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound's state successfully unloaded!\n\n" COLOR_RESET);
     }
-    snd->file_path = "";
+    if (snd->file_path) {
+        free(snd->file_path);
+        snd->file_path = NULL; 
+        fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound's file_path successfully freed!\n\n" COLOR_RESET);
+    }
 }
 
 void play_sound(sound *snd)
@@ -77,6 +98,10 @@ void play_sound(sound *snd)
 bool is_playing(sound *snd)
 {
     return (snd->state->waveHeader.dwFlags & WHDR_DONE) == 0;
+}
+
+static void sound_reset_done_flag(sound* snd) {
+    snd->state->waveHeader.dwFlags &= ~WHDR_DONE;
 }
 
 void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR param1, DWORD_PTR param2) {
