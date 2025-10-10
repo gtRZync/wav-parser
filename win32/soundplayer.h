@@ -1,4 +1,6 @@
 #pragma once
+#include <stdbool.h>
+
 typedef struct state__ *state;
 
 typedef struct sound {
@@ -10,5 +12,4 @@ sound sound_init(const char* file_path);
 void  sound_load(sound* _sound);
 void  sound_unload(sound* _sound);
 void  play_sound(sound* _sound);
-void  sleep(unsigned int milliseconds);
-void  playsound_ui_demo(sound* snd);
+bool  is_playing(sound* snd);
