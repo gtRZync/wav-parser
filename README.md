@@ -33,6 +33,10 @@ int main(int argc, char const *argv[])
 #include "win32/soundplayer.h"
 
 //temporary code 
+static void playsound_ui_demo(sound* snd) {
+    //impl
+}
+
 int main(int argc, char const *argv[])
 {
     sound snd = sound_init("resources/FlappyBird_Menu.wav");
