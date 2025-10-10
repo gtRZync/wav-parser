@@ -76,7 +76,7 @@ void play_sound(sound *snd)
 
 bool is_playing(sound *snd)
 {
-    return (snd->state->waveHeader.dwFlags & WHDR_DONE);
+    return (snd->state->waveHeader.dwFlags & WHDR_DONE) == 0;
 }
 
 void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR param1, DWORD_PTR param2) {
