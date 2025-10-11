@@ -10,8 +10,13 @@ struct state__ {
     WAVEFORMATEX format;
     HWAVEOUT hWaveOut;
     WAVEHDR waveHeader;
-    bool is_playing;
+    DWORD sndFlags;
 };
+
+typedef enum Flags {
+    SOUND_PLAYBACK_DONE = 0x00000001,
+    SOUND_IS_PLAYING = 0x00000002
+}Flags;
 
 static void WAVEFORMATEX_HDRinit(const sound* snd) {
     wav_file_t* wav_file = &snd->state->wav_file;
@@ -31,8 +36,14 @@ static void WAVEFORMATEX_HDRinit(const sound* snd) {
 }
 
 static void prepareSoundData(const sound* snd) {
+    //TODO: use dwInstance to add sound ctx and manage flags such as SOUND_PLAYBACK_DONE, SOUND_IS_PLAYING...etc
     waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, (DWORD_PTR)0, (DWORD_PTR)0, CALLBACK_NULL);
-    waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
+    waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+}
+
+static void unprepareSoundData(const sound* snd) {
+    waveOutUnprepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+    waveOutClose(snd->state->hWaveOut);
 }
 
 sound sound_init(const char* file_path) {
@@ -74,8 +85,7 @@ void sound_unload(sound *snd)
         return;
     }
     if (snd->state) {
-        waveOutUnprepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
-        waveOutClose(snd->state->hWaveOut);
+        unprepareSoundData(snd);
         free(snd->state);
         snd->state = NULL; 
         fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound's state successfully unloaded!\n\n" COLOR_RESET);
@@ -83,15 +93,22 @@ void sound_unload(sound *snd)
     if (snd->file_path) {
         free(snd->file_path);
         snd->file_path = NULL; 
-        fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound's file_path successfully freed!\n\n" COLOR_RESET);
+        fprintf(stdout, COLOR_GREEN "[INFO] - Sound's file_path successfully freed!\n\n" COLOR_RESET);
     }
 }
 
+/**
+ * @brief plays a sound from a parsed wav sound
+ * 
+ * @param snd initialized sound struct
+ *! @warning `play_sound()` runs in the main thread, while the `WaveOutProc` callback is executed by the Windows audio system in a separate thread. Both functions access `sndFlags` without synchronization.
+ *! This introduces a potential data race, which can lead to undefined behavior. Even if it appears to work reliably during simple flag checks, this is not guaranteed to be safe.
+ */
 void play_sound(sound *snd)
 {
-    if(!snd->state->is_playing) {
-        waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(snd->state->waveHeader));
-        snd->state->is_playing = true;
+    if(!(snd->state->sndFlags & SOUND_IS_PLAYING)) {
+        waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+        snd->state->sndFlags |= SOUND_IS_PLAYING;
     }
 }
 
@@ -105,5 +122,10 @@ static void sound_reset_done_flag(sound* snd) {
 }
 
 void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR param1, DWORD_PTR param2) {
-    
+    switch(uMsg) {
+        case WOM_DONE:
+        {
+
+        }
+    }
 }
