@@ -126,7 +126,7 @@ void play_sound(sound *snd)
 /**
  * @brief Checks whether the audio buffer is still playing.
  *
- * This function reads the `dwFlags` member atomically using `InterlockedCompareExchange64`
+ * This function reads the `dwFlags` member atomically using `InterlockedCompareExchange`
  * to ensure a thread-safe read without modifying the value.
  *
  * @returns `true` if playback is ongoing (`WHDR_DONE` not set); `false` if playback is complete.
@@ -136,7 +136,7 @@ void play_sound(sound *snd)
  */
 bool is_playing(sound *snd)
 {
-    LONG result = InterlockedCompareExchange64(&snd->state->waveHeader.dwFlags, 0, 0);
+    LONG result = InterlockedCompareExchange(&snd->state->waveHeader.dwFlags, 0, 0);
     return (result & WHDR_DONE) == 0;
 }
 
