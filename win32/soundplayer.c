@@ -98,11 +98,10 @@ void sound_unload(sound *snd)
 }
 
 /**
- * @brief plays a sound from a parsed wav sound
+ * @brief Plays a parsed WAV sound.
  * 
- * @param snd initialized sound struct
- *! @warning `play_sound()` runs in the main thread, while the `WaveOutProc` callback is executed by the Windows audio system in a separate thread. Both functions access `sndFlags` without synchronization.
- *! This introduces a potential data race, which can lead to undefined behavior. Even if it appears to work reliably during simple flag checks, this is not guaranteed to be safe.
+ * @param snd Initialized sound struct.
+ *! @warning Not thread-safe: `play_sound()` and `WaveOutProc` access `sndFlags` concurrently without synchronization, which may cause data races and undefined behavior.
  */
 void play_sound(sound *snd)
 {

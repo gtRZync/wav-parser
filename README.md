@@ -31,15 +31,11 @@ int main(int argc, char const *argv[])
 ### Win32 Soundplayer(using the wav parser)
 ```c
 #include "win32/soundplayer.h"
-
-//temporary code 
-static void playsound_ui_demo(sound* snd) {
-    //impl
-}
+#include "playsound_ui_demo.h"
 
 int main(int argc, char const *argv[])
 {
-    sound snd = sound_init("resources/sound/FlappyBird_Menu.wav");
+    sound snd = sound_init("resources/sound/bass-wiggle.wav");
     sound_load(&snd);
     play_sound(&snd);
     playsound_ui_demo(&snd);
