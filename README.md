@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
 {
     wav_file_t file;
     wav_init_file(&file);
-    if(wav_parse_file("resources/FlappyBird_Menu.wav", &file)) {
+    if(wav_parse_file("resources/sound/FlappyBird_Menu.wav", &file)) {
         wav_print_header(&file.header);
     }
     wav_free_file(&file);
@@ -39,7 +39,7 @@ static void playsound_ui_demo(sound* snd) {
 
 int main(int argc, char const *argv[])
 {
-    sound snd = sound_init("resources/FlappyBird_Menu.wav");
+    sound snd = sound_init("resources/sound/FlappyBird_Menu.wav");
     sound_load(&snd);
     play_sound(&snd);
     playsound_ui_demo(&snd);
@@ -54,21 +54,21 @@ int main(int argc, char const *argv[])
 
 |          Success Output                               |
 |-------------------------------------------------------|
-| ![Demo](resources/demo.png)                           |
+| ![Demo](resources/images/demo.png)                           |
 
 |          Error Output                                 |
 |-------------------------------------------------------|
-| ![Error](resources/not_a_wav_err.png)                 |
+| ![Error](resources/images/not_a_wav_err.png)                 |
 
 ### Win32 Soundplayer(using the wav parser)
 
 |          Player Demo : Playing                        |
 |-------------------------------------------------------|
-| ![Demo](resources/player_demo.gif)                    |
+| ![Demo](resources/images/player_demo.gif)                    |
 
 |          Player Demo : End                            |
 |-------------------------------------------------------|
-| ![Demo](resources/player_demo_end.png)                    |
+| ![Demo](resources/images/player_demo_end.png)                    |
 
 
 ## License
