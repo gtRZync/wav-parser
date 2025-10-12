@@ -1,3 +1,20 @@
+/*
+ * -------------------------------------------------------------
+ *  c-wav-player: Simple WAV File Parser and Win32 Sound Player
+ *  Author: Myson Dio (gtRZync)  
+ *  License: MIT License
+ *  Repository: https://github.com/gtRZync/c-wav-player
+ *  
+ *  Description:
+ *    Lightweight parser for standard RIFF/WAV files and a sound
+ *    playback system using Windows waveOut API. Skips metadata
+ *    chunks (e.g. LIST, smpl), reads PCM audio data, and plays it.
+ *
+ *  See README.md for usage and LICENSE for distribution terms.
+ * -------------------------------------------------------------
+ */
+
+
 #include "soundplayer.h"
 #include "wav_parser.h"
 #define WIN32_LEAN_AND_MEAN
@@ -14,6 +31,7 @@ struct state__ {
     HWAVEOUT hWaveOut;
     WAVEHDR waveHeader;
     DWORD sndFlags;
+    CRITICAL_SECTION lock;
 };
 
 typedef enum Flags {
@@ -40,7 +58,6 @@ static void WAVEFORMATEX_HDRinit(const sound* snd) {
 }
 
 static void prepareSoundData(sound* snd) {
-    //TODO: use dwInstance to add sound ctx and manage flags such as SOUND_PLAYBACK_DONE, SOUND_IS_PLAYING...etc
     waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, (DWORD_PTR)waveOutProc, (DWORD_PTR)snd, CALLBACK_FUNCTION);
     waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
 }
@@ -80,6 +97,7 @@ void sound_load(sound *snd)
         exit(EXIT_FAILURE);
     }
     snd->state->sndFlags |= SOUND_WAV_PARSED;
+    InitializeCriticalSection(&snd->state->lock);
     WAVEFORMATEX_HDRinit(snd);
     prepareSoundData(snd);
 }
@@ -112,7 +130,7 @@ void sound_unload(sound *snd)
  */
 void play_sound(sound *snd)
 {
-    //TODO: use CriticalSections, or Atomic functions such as InterlockedOr, InterlockedAnd, etc.,
+    //TODO: yeah no vro pack it up and give every sound a critical section lock ✌🏻😭
     //TODO: maybe use double Buffering for replays
     if(!(snd->state->sndFlags & SOUND_IS_PLAYING)) {
         if((snd->state->sndFlags & SOUND_PLAYBACK_DONE) && (snd->state->waveHeader.dwFlags & WHDR_DONE)) {
@@ -138,10 +156,6 @@ bool is_playing(sound *snd)
 {
     LONG result = InterlockedCompareExchange(&snd->state->waveHeader.dwFlags, 0, 0);
     return (result & WHDR_DONE) == 0;
-}
-
-static void sound_reset_done_flag(sound* snd) {
-    snd->state->waveHeader.dwFlags &= ~WHDR_DONE;
 }
 
 static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR param1, DWORD_PTR param2) {

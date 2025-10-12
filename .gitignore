@@ -1,3 +1,5 @@
 .vscode/
 *.exe
 cmd.txt
+resources/sound/Lemonade (feat. NAV).wav
+test.c

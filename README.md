@@ -8,6 +8,7 @@
 - Supports 16-bit PCM, stereo and mono
 - Skips unknown chunks safely (robust RIFF parsing)
 - Prints header information and duration
+- Play audio (via soundplayer.h)
 
 ## Usage Example 
 

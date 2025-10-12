@@ -55,7 +55,7 @@ void playsound_ui_demo(sound* snd) {
         printf(COLOR_GREEN "[File] " COLOR_RESET "%s%s\n\n", filename, states[idx % size]);
         fflush(stdout);
         ++idx;
-        Sleep(1000);
+        Sleep(500);
     }
 
     printf(COLOR_CYAN "╔══════════════════════════════════╗\n");
