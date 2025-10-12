@@ -38,6 +38,7 @@ typedef enum Flags {
     SOUND_PLAYBACK_DONE = 0x00000001,
     SOUND_IS_PLAYING = 0x00000002,
     SOUND_WAV_PARSED = 0x00000004,
+    SOUND_LOOPING = 0x00000008
 }Flags;
 
 static void WAVEFORMATEX_HDRinit(const sound* snd) {
@@ -59,6 +60,15 @@ static void WAVEFORMATEX_HDRinit(const sound* snd) {
 
 static void prepareSoundData(sound* snd) {
     waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, (DWORD_PTR)waveOutProc, (DWORD_PTR)snd, CALLBACK_FUNCTION);
+    /**
+     *MMRESULT result = waveOutOpen(...);
+     *if (result != MMSYSERR_NOERROR) {
+     *    char errorText[MAXERRORLENGTH];
+     *    waveOutGetErrorTextA(result, errorText, MAXERRORLENGTH);
+     *    printf("Failed to open wave output device: %s\n", errorText);
+     *    return 1;
+     *}
+     */
     waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
 }
 
@@ -104,6 +114,7 @@ void sound_load(sound *snd)
 
 void sound_unload(sound *snd)
 {
+    //TODO: maybe add refCount before free so i could do : if (ptr->refCount == 0) free(ptr);
     if (!snd) return;
     if(!snd->state && !snd->file_path) {
         fprintf(stdout, COLOR_YELLOW "\n[WARNING] - No free needed - Sound wasn't initialized.\n\n" COLOR_RESET);
@@ -127,7 +138,7 @@ void sound_unload(sound *snd)
  * @brief Plays a parsed WAV sound.
  * 
  * @param snd Initialized sound struct.
- *! @warning Not thread-safe: `play_sound()` and `WaveOutProc` access `sndFlags` concurrently without synchronization, which may cause data races and undefined behavior.
+ *! @warning Not thread-safe: `play_sound()` and `WaveOutProc` access state flags concurrently without synchronization, which may cause data races and undefined behavior.
  */
 void play_sound(sound *snd)
 {
@@ -155,7 +166,7 @@ void play_sound(sound *snd)
  */
 bool is_playing(sound *snd)
 {
-    LONG result = InterlockedCompareExchange(&snd->state->waveHeader.dwFlags, 0, 0);
+    LONG result = InterlockedCompareExchange((volatile LONG*)&snd->state->waveHeader.dwFlags, 0, 0);
     return (result & WHDR_DONE) == 0;
 }
 
@@ -165,8 +176,10 @@ static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, 
         {
             sound* snd = (sound*)dwInstance;
 
-            snd->state->sndFlags &= ~SOUND_IS_PLAYING;
-            snd->state->sndFlags |= SOUND_PLAYBACK_DONE;
+            if(snd) {
+                InterlockedAnd((volatile LONG*)&snd->state->sndFlags, ~SOUND_IS_PLAYING);
+                InterlockedOr((volatile LONG*)&snd->state->sndFlags, SOUND_PLAYBACK_DONE);
+            }
         }
     }
 }
