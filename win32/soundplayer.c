@@ -91,7 +91,7 @@ sound sound_init(const char* file_path) {
 void sound_load(sound *snd)
 {  
     if(snd->state->sndFlags & SOUND_WAV_PARSED) return; //!maybe log
-
+    wav_init_file(&snd->state->wav_file);
     if(!wav_parse_file(snd->file_path, &snd->state->wav_file)) {
         sound_unload(snd);
         exit(EXIT_FAILURE);
@@ -111,6 +111,7 @@ void sound_unload(sound *snd)
     }
     if (snd->state) {
         unprepareSoundData(snd);
+        DeleteCriticalSection(&snd->state->lock);
         free(snd->state);
         snd->state = NULL; 
         fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound's state successfully unloaded!\n\n" COLOR_RESET);

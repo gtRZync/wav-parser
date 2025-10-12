@@ -144,7 +144,7 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
     }
 
     while (fread(wav_file->header.data, 1, 4, fp) == 4) {
-        int32_t chunkSize = 0;
+        uint32_t chunkSize = 0;
         
         if (fread(&chunkSize, 1, 4, fp) != 4) {
             fprintf(stderr, COLOR_YELLOW "[WARNING] - Unexpected end of file while reading chunk size.\n" COLOR_RESET);
