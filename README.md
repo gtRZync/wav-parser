@@ -39,7 +39,12 @@ int main(int argc, char const *argv[])
     sound snd = sound_init("resources/sound/bass-wiggle.wav");
     sound_load(&snd);
     play_sound(&snd);
+
+    // Keep the main thread alive while the sound is playing.
+    // This uses a simple UI demo that internally checks is_playing(snd).
+    // Alternatively, a sleep loop or similar wait could be used instead.
     playsound_ui_demo(&snd);
+
     sound_unload(&snd);
     return 0;
 }
