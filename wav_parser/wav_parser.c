@@ -15,6 +15,7 @@
  */
 
 #include "wav_parser.h"
+#include "log.h"
 #include <errno.h>
 
 void wav_print_header(const wav_header_t* header) {
@@ -88,7 +89,7 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
     if(!wav_validate_filename(path)) {
         const char* file = strrchr(path, '/');
         const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1;
-        fprintf(stderr, COLOR_RED "[ERROR] - Invalid file type." COLOR_BLUE "'%s'" COLOR_RED " is not a valid WAV file. Please provide a .wav file.\n" COLOR_RESET, filename);
+        Log(LOG_ERROR, "Invalid file type." COLOR_BLUE "'%s'" COLOR_RED " is not a valid WAV file. Please provide a .wav file.\n", filename);
         return false;
     }
 
@@ -96,15 +97,15 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
     bool retval = true;
     fp = fopen(path, "rb");
     if(fp == NULL) {
-        fprintf(stderr,COLOR_RED "[ERROR] - Failed to open file : %s\n" COLOR_RESET, path);
-        fprintf(stderr, COLOR_YELLOW "[INFO] - Cause : %s.\n" COLOR_RESET, strerror(errno));
+        Log(LOG_ERROR, "Failed to open file : %s\n" , path);
+        Log(LOG_ERROR, "Reason : %s.\n" , strerror(errno));
         retval = false;
         goto CLOSE_FILE;
     }
 
     read_text(wav_file->header.RIFF, fp);
     if(strcmp((wav_file->header.RIFF), "RIFF") != 0) {
-        fprintf(stderr,COLOR_RED "[ERROR] - %s's first 4 bytes should be \"RIFF\" but are : %s\n" COLOR_RESET, path, wav_file->header.RIFF);
+        Log(LOG_ERROR, "%s's first 4 bytes should be \"RIFF\" but are : %s\n", path, wav_file->header.RIFF);
         retval = false;
         goto CLOSE_FILE;
     }
@@ -113,21 +114,21 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
 
     read_text(wav_file->header.WAVE, fp);
     if(strcmp((wav_file->header.WAVE), "WAVE") != 0 ) {
-        fprintf(stderr,COLOR_RED "[ERROR] - %s's 4 bytes should be \"WAVE\" but are : %s\n" COLOR_RESET, path, wav_file->header.WAVE);
+        Log(LOG_ERROR, "%s's 4 bytes should be \"WAVE\" but are : %s\n", path, wav_file->header.WAVE);
         retval = false;
         goto CLOSE_FILE;
     }
 
     read_text(wav_file->header.fmt, fp);
     if(strcmp((wav_file->header.fmt), "fmt ") != 0 ) {
-        fprintf(stderr,COLOR_RED "[ERROR] - %s's 4 bytes should be \"fmt/0\" but are : %s\n" COLOR_RESET, path, wav_file->header.fmt);
+        Log(LOG_ERROR, "%s's 4 bytes should be \"fmt/0\" but are : %s\n", path, wav_file->header.fmt);
         retval = false;
         goto CLOSE_FILE;
     }
     fread(&wav_file->header.chunk_size, 4/* bytes */, 1, fp);
     fread(&wav_file->header.format_type, 2/* bytes */, 1, fp);
     if(wav_file->header.format_type != 1) {
-        fprintf(stderr,COLOR_RED "[ERROR] - %s's format type should be 1(PCM), but is : %d\n" COLOR_RESET, path, wav_file->header.format_type);
+        Log(LOG_ERROR, "%s's format type should be 1(PCM), but is : %d\n" COLOR_RESET, path, wav_file->header.format_type);
         retval = false;
         goto CLOSE_FILE;
     }
@@ -138,7 +139,7 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
     fread(&wav_file->header.block_align, 2/* bytes */, 1, fp);
     fread(&wav_file->header.bits_per_sample, 2/* bytes */, 1, fp);
     if(wav_file->header.bits_per_sample != 16) {
-        fprintf(stderr,COLOR_RED "[ERROR] - %s's bits per sample should be 16, but is : %d\n" COLOR_RESET, path, wav_file->header.sample_rate);
+        Log(LOG_ERROR, "%s's bits per sample should be 16, but is : %d\n", path, wav_file->header.sample_rate);
         retval = false;
         goto CLOSE_FILE;
     }
@@ -147,7 +148,7 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
         uint32_t chunkSize = 0;
         
         if (fread(&chunkSize, 1, 4, fp) != 4) {
-            fprintf(stderr, COLOR_YELLOW "[WARNING] - Unexpected end of file while reading chunk size.\n" COLOR_RESET);
+            Log(LOG_WARNING, "[WARNING] - Unexpected end of file while reading chunk size.\n");
             break;
         }
 
@@ -163,22 +164,22 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
 
     wav_file->data = (uint8_t*)malloc(wav_file->data_length);
     if(wav_file->data == NULL) {
-        fprintf(stderr,COLOR_RED "[ERROR] - Failed to allocate %d bytes for data.\n" COLOR_RESET, wav_file->data_length);
-        fprintf(stderr, COLOR_YELLOW "[INFO] - Cause : %s.\n" COLOR_RESET, strerror(errno));
+        Log(LOG_ERROR, "Memory allocation failed: unable to allocate %d bytes for data.\n", wav_file->data_length);
+        Log(LOG_ERROR, "Reason: %s\n", strerror(errno));
         retval = false;
         goto CLOSE_FILE;
     }
 
     if(fread(wav_file->data, 1, wav_file->data_length, fp) != wav_file->data_length) {
-        fprintf(stderr,COLOR_RED "[ERROR] - Failed to read data's bytes.\n" COLOR_RESET);
+        Log(LOG_ERROR, "Failed to read data's bytes.\n");
         retval = false;
         goto CLOSE_FILE;
     }
     
     wav_file->samples = wav_file->data_length / wav_file->header.block_align;
     const char* file = strrchr(path, '/');
-    const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1;
-    fprintf(stdout, COLOR_GREEN "\n[INFO] - %s parsed successfully!!!!\n\n" COLOR_RESET, filename);
+    const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1; //!unsafe
+    Log(LOG_INFO, "%s parsed successfully!!!!\n\n", filename);
 CLOSE_FILE:
     fclose(fp);
     return retval;
@@ -198,9 +199,9 @@ void wav_free_file(wav_file_t *wav_file)
     if (wav_file->data != NULL) {
         free(wav_file->data);
         wav_file->data = NULL; 
-        fprintf(stdout, COLOR_GREEN "\n[INFO] - Data section successfully freed!\n\n" COLOR_RESET);
+        Log(LOG_INFO, "Data section successfully freed!\n\n");
     } else {
-        fprintf(stdout, COLOR_YELLOW "\n[WARNING] - No free needed - Data block was not allocated.\n\n" COLOR_RESET);
+        Log(LOG_WARNING, "No free needed - Data block was not allocated.\n\n");
         return;
     }
     wav_file->data_length = 0;

@@ -1,5 +1,7 @@
 #include "soundplayer.h"
 #include "wav_parser.h"
+#include "log.h"
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define HIDE_CURSOR     "\033[?25l"
 #define SHOW_CURSOR     "\033[?25h"

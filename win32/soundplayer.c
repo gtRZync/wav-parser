@@ -20,6 +20,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <mmsystem.h>
+#include "log.h"
 
 //TODO: add guards against invalid pointers usage 
 
@@ -45,7 +46,8 @@ static bool WaveOutOpFailed(MMRESULT mmResult, const char* fn_name) {
     if (mmResult != MMSYSERR_NOERROR) {
         char errorText[MAXERRORLENGTH];
         waveOutGetErrorTextA(mmResult, errorText, MAXERRORLENGTH);
-        fprintf(stderr, COLOR_RED "[ERROR] - %s failed | Cause : %s\n" COLOR_RESET, fn_name, errorText); //!use better errText
+        Log(LOG_ERROR, "%s failed.\n", fn_name); //!use better errText
+        Log(LOG_ERROR, "Reason: %s.\n", errorText); //!use better errText
         return true;
     }
     return false;
@@ -78,6 +80,7 @@ static void prepareSoundData(sound* snd) {
     mmres = waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
     if(WaveOutOpFailed(mmres, "waveOutPrepareHeader")) {
         sound_unload(snd);
+        waveOutClose(snd->state->hWaveOut);
         exit(EXIT_FAILURE);
     }
 }
@@ -100,7 +103,7 @@ static void unprepareSoundData(sound* snd) {
 sound sound_init(const char* file_path) {
     state s = (state)malloc(sizeof(struct state__));
     if(!s) {
-        fprintf(stderr, COLOR_RED "[ERROR] - malloc failed to allocate memory for sound state\n" COLOR_RESET);
+        Log(LOG_ERROR, "malloc failed to allocate memory for sound state\n");
         exit(EXIT_FAILURE);
     }
     memset(s, 0, sizeof(struct state__));
@@ -109,7 +112,7 @@ sound sound_init(const char* file_path) {
     size_t len = strlen(file_path);
     snd.file_path = (char*)malloc(len + 1);
     if(!snd.file_path) {
-        fprintf(stderr, COLOR_RED "[ERROR] - malloc failed to allocate memory for file_path\n" COLOR_RESET);
+        Log(LOG_ERROR, "malloc failed to allocate memory for file_path\n");
         free(s);
         exit(EXIT_FAILURE);
     }
@@ -137,7 +140,7 @@ void sound_unload(sound *snd)
     //TODO: maybe add refCount before free so i could do : if (ptr->refCount == 0) free(ptr);
     if (!snd) return;
     if(!snd->state && !snd->file_path) {
-        fprintf(stdout, COLOR_YELLOW "\n[WARNING] - No free needed - Sound wasn't initialized.\n\n" COLOR_RESET);
+        Log(LOG_WARNING, "No free needed - Sound wasn't initialized.\n\n");
         return;
     }
     if (snd->state) {
@@ -145,12 +148,12 @@ void sound_unload(sound *snd)
         DeleteCriticalSection(&snd->state->lock);
         free(snd->state);
         snd->state = NULL; 
-        fprintf(stdout, COLOR_GREEN "\n[INFO] - Sound's state successfully unloaded!\n\n" COLOR_RESET);
+        Log(LOG_INFO, "Sound's state successfully unloaded!\n\n");
     }
     if (snd->file_path) {
         free(snd->file_path);
         snd->file_path = NULL; 
-        fprintf(stdout, COLOR_GREEN "[INFO] - Sound's file_path successfully freed!\n\n" COLOR_RESET);
+        Log(LOG_INFO, "Sound's file_path successfully freed!\n\n");
     }
 }
 
@@ -164,6 +167,7 @@ void play_sound(sound *snd)
 {
     //TODO: yeah no vro pack it up and give every sound a critical section lock ✌🏻😭
     //TODO: maybe use double Buffering for replays
+    
     if(!(snd->state->sndFlags & SOUND_IS_PLAYING)) {
         if((snd->state->sndFlags & SOUND_PLAYBACK_DONE) && (snd->state->waveHeader.dwFlags & WHDR_DONE)) {
             snd->state->sndFlags &= ~SOUND_PLAYBACK_DONE;
@@ -174,7 +178,8 @@ void play_sound(sound *snd)
             prepareSoundData(snd);
             mmres = waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
             if(WaveOutOpFailed(mmres, "waveOutWrite")) {
-                //!Log re-write fail
+                Log(LOG_ERROR, "waveOutWrite failed after recovery attempt. Audio output unavailable. Aborting playback.\n");
+                return;
             }
         }
         snd->state->sndFlags |= SOUND_IS_PLAYING;
