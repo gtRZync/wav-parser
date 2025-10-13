@@ -41,6 +41,17 @@ typedef enum Flags {
     SOUND_LOOPING = 0x00000008
 }Flags;
 
+static bool WaveOutOpFailed(MMRESULT mmResult, const char* fn_name) {
+    if (mmResult != MMSYSERR_NOERROR) {
+        char errorText[MAXERRORLENGTH];
+        waveOutGetErrorTextA(mmResult, errorText, MAXERRORLENGTH);
+        fprintf(stderr, COLOR_RED "[ERROR] - %s failed | Cause : %s\n" COLOR_RESET, fn_name, errorText); //!use better errText
+        return true;
+    }
+    return false;
+}
+
+
 static void WAVEFORMATEX_HDRinit(const sound* snd) {
     wav_file_t* wav_file = &snd->state->wav_file;
     WAVEFORMATEX* format = &snd->state->format;
@@ -59,22 +70,31 @@ static void WAVEFORMATEX_HDRinit(const sound* snd) {
 }
 
 static void prepareSoundData(sound* snd) {
-    waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, (DWORD_PTR)waveOutProc, (DWORD_PTR)snd, CALLBACK_FUNCTION);
-    /**
-     *MMRESULT result = waveOutOpen(...);
-     *if (result != MMSYSERR_NOERROR) {
-     *    char errorText[MAXERRORLENGTH];
-     *    waveOutGetErrorTextA(result, errorText, MAXERRORLENGTH);
-     *    printf("Failed to open wave output device: %s\n", errorText);
-     *    return 1;
-     *}
-     */
-    waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+    MMRESULT mmres = waveOutOpen(&snd->state->hWaveOut, WAVE_MAPPER, &snd->state->format, (DWORD_PTR)waveOutProc, (DWORD_PTR)snd, CALLBACK_FUNCTION);
+    if(WaveOutOpFailed(mmres, "waveOutOpen")) {
+        sound_unload(snd);
+        exit(EXIT_FAILURE);
+    }
+    mmres = waveOutPrepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+    if(WaveOutOpFailed(mmres, "waveOutPrepareHeader")) {
+        sound_unload(snd);
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void unprepareSoundData(sound* snd) {
-    waveOutUnprepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
-    waveOutClose(snd->state->hWaveOut);
+    MMRESULT mmres = waveOutReset(snd->state->hWaveOut);
+    if(WaveOutOpFailed(mmres, "waveOutUnprepareHeader")) {
+        //? Continue anyway, maybe device already stopped/invalid
+    }
+    mmres = waveOutUnprepareHeader(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+    if(WaveOutOpFailed(mmres, "waveOutUnprepareHeader")) {
+        //? Can't free buffer safely; proceed to close device
+    }
+    mmres = waveOutClose(snd->state->hWaveOut);
+    if(WaveOutOpFailed(mmres, "waveOutClose")) {
+        //? Nothing else to do — OS will reclaim resources on process exit
+    }
 }
 
 sound sound_init(const char* file_path) {
@@ -148,7 +168,15 @@ void play_sound(sound *snd)
         if((snd->state->sndFlags & SOUND_PLAYBACK_DONE) && (snd->state->waveHeader.dwFlags & WHDR_DONE)) {
             snd->state->sndFlags &= ~SOUND_PLAYBACK_DONE;
         }
-        waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+        MMRESULT mmres = waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+        if(WaveOutOpFailed(mmres, "waveOutWrite")) {
+            unprepareSoundData(snd);
+            prepareSoundData(snd);
+            mmres = waveOutWrite(snd->state->hWaveOut, &snd->state->waveHeader, sizeof(WAVEHDR));
+            if(WaveOutOpFailed(mmres, "waveOutWrite")) {
+                //!Log re-write fail
+            }
+        }
         snd->state->sndFlags |= SOUND_IS_PLAYING;
     }
 }
@@ -166,8 +194,8 @@ void play_sound(sound *snd)
  */
 bool is_playing(sound *snd)
 {
-    LONG result = InterlockedCompareExchange((volatile LONG*)&snd->state->waveHeader.dwFlags, 0, 0);
-    return (result & WHDR_DONE) == 0;
+    LONG result = InterlockedCompareExchange((volatile LONG*)&snd->state->sndFlags, 0, 0);
+    return (result & SOUND_IS_PLAYING) != 0;
 }
 
 static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR param1, DWORD_PTR param2) {
