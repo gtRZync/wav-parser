@@ -64,7 +64,7 @@ void playsound_ui_demo(sound* snd) {
     printf("║ " COLOR_MAGENTA "       ✅ Playback Complete      " COLOR_RESET COLOR_CYAN "║\n");
     printf("╚══════════════════════════════════╝\n\n");
 
-    printf(COLOR_GREEN "Thank you for listening! 🎵\n" COLOR_RESET);
+    Log(LOG_INFO, "Thank you for listening! 🎵\n");
 
     printf(SHOW_CURSOR);
 }

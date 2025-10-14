@@ -10,8 +10,6 @@ int main(int argc, char const *argv[])
     //?for replay demo purposes
     play_sound(&snd);
     playsound_ui_demo(&snd);
-    play_sound(&snd);
-    playsound_ui_demo(&snd);
     sound_unload(&snd);
     return 0;
 }
