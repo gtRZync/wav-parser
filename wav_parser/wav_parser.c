@@ -16,6 +16,7 @@
 
 #include "wav_parser.h"
 #include "log.h"
+#include "path_utils.h"
 #include <errno.h>
 
 void wav_print_header(const wav_header_t* header) {
@@ -63,10 +64,9 @@ void wav_print_header(const wav_header_t* header) {
 static bool wav_validate_filename(const char* path) {
     const char* EXTENSION = ".wav";
     
-    const char* file = strrchr(path, '/');
-    const char* filename = (file == NULL) ? strrchr(path, '\\') : file;
+    char* filename = get_filename(path);
     
-    const char* dot = (filename == NULL) ? strrchr(path, '.') : strrchr(filename, '.');
+    const char* dot = (filename) ? strrchr(filename, '.') : NULL;
     if(!dot || dot == path) {
         return false;
     }
@@ -75,8 +75,9 @@ static bool wav_validate_filename(const char* path) {
     if (left >= path && (*left == '\\' || *left == '/')) {
         return false;
     }
-
-    return strcmp(dot, EXTENSION) == 0;
+    int res = strcasecmp(dot, EXTENSION) == 0;
+    free(filename);
+    return res;
 }
 
 static void read_text(char* buff, FILE* file) {
@@ -87,9 +88,9 @@ static void read_text(char* buff, FILE* file) {
 bool wav_parse_file(const char *path, wav_file_t* wav_file)
 {
     if(!wav_validate_filename(path)) {
-        const char* file = strrchr(path, '/');
-        const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1;
+        char* filename = get_filename(path);
         Log(LOG_ERROR, "Invalid file type." COLOR_BLUE "'%s'" COLOR_RED " is not a valid WAV file. Please provide a .wav file.\n", filename);
+        free(filename);
         return false;
     }
 
@@ -177,9 +178,9 @@ bool wav_parse_file(const char *path, wav_file_t* wav_file)
     }
     
     wav_file->samples = wav_file->data_length / wav_file->header.block_align;
-    const char* file = strrchr(path, '/');
-    const char* filename = (file == NULL) ? strrchr(path, '\\') + 1 : file + 1; //!unsafe
+    char* filename = get_filename(path); 
     Log(LOG_INFO, "%s parsed successfully!!!!\n\n", filename);
+    free(filename);
 CLOSE_FILE:
     fclose(fp);
     return retval;

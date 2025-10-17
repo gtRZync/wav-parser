@@ -1,6 +1,7 @@
 #include "soundplayer.h"
 #include "wav_parser.h"
 #include "log.h"
+#include "path_utils.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define HIDE_CURSOR     "\033[?25l"
@@ -41,8 +42,7 @@ void playsound_ui_demo(sound* snd) {
     const char* states[] = { "", ".", "..", "...", "...." };
     size_t size = sizeof(states) / sizeof(states[0]);
     int idx = 0;
-    const char* file = strrchr(snd->file_path, '/');
-    const char* filename = (file == NULL) ? strrchr(snd->file_path, '\\') + 1 : file + 1; //!will fail if it's not a path
+    char* filename = get_filename(snd->file_path); 
 
     printf(HIDE_CURSOR);
 
@@ -65,6 +65,6 @@ void playsound_ui_demo(sound* snd) {
     printf("╚══════════════════════════════════╝\n\n");
 
     Log(LOG_INFO, "Thank you for listening! 🎵\n");
-
+    free(filename);
     printf(SHOW_CURSOR);
 }
