@@ -14,6 +14,13 @@
  * -------------------------------------------------------------
  */
 
+/**
+ * NOTE: Only the main thread may change (assign, null, or free) `snd`.
+ * Threads may safely use or modify fields inside `*snd` if it’s non-null.
+ * This check is thread-safe under that assumption.
+ * if (!snd) return;
+ */
+
 
 #include "soundplayer.h"
 #include "wav_parser.h"
