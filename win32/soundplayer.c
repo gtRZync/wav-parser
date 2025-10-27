@@ -182,6 +182,8 @@ void play_sound(sound *snd)
  *
  * This function reads the `dwFlags` member atomically using `InterlockedCompareExchange`
  * to ensure a thread-safe read without modifying the value.
+ * 
+ * @param snd Initialized sound struct.
  *
  * @returns `true` if playback is ongoing (`WHDR_DONE` not set); `false` if playback is complete.
  *
