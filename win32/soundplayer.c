@@ -34,6 +34,7 @@
 //!: check play_sound
 //TODO: add guards against invalid pointers usage 
 //!Maybe add an InitSoundSystem that init a global lock and also keep tracks of every sound created to have better and safer access to ptr check
+//* date: 25/10/2025, not so sure about the idea prior to this comment no more, but ion wanna remove it completely just yet 
 
 static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR param1, DWORD_PTR param2);
 static void sound_cleanup_on_fail(sound* snd);
@@ -57,38 +58,46 @@ struct state__ {
 };
 
 typedef enum Flags {
-    SOUND_PLAYBACK_DONE     = 0x00000001,
-    SOUND_IS_PLAYING        = 0x00000002,
-    SOUND_WAV_PARSED        = 0x00000004,
-    SOUND_LOOPING           = 0x00000008,
+    SOUND_IS_INITIALIZED    = 0x00000001,
+    SOUND_PLAYBACK_DONE     = 0x00000002,
+    SOUND_IS_PLAYING        = 0x00000004,
+    SOUND_WAV_PARSED        = 0x00000008,
+    SOUND_LOOPING           = 0x0000000E, //?Even though 0xE is technically a combination of multiple bits, it represents one valid state (since a sound's is_done and playing flags are mutually exclusive )
 }Flags;
 
 //=================================================PUBLIC API IMPLEMENTATION==========================================================
 
-sound sound_init(const char* file_path) {
+sound *sound_init(const char* file_path) {
     state s = (state)malloc(sizeof(struct state__));
     if(!s) {
         Log(LOG_ERROR, "malloc failed to allocate memory for sound state\n");
         exit(EXIT_FAILURE);
     }
     memset(s, 0, sizeof(struct state__));
-    sound snd;
-    snd.file_path = NULL;
-    size_t len = strlen(file_path);
-    snd.file_path = (char*)malloc(len + 1);
-    if(!snd.file_path) {
-        Log(LOG_ERROR, "malloc failed to allocate memory for file_path\n");
+    sound *snd = (sound*)malloc(sizeof(sound));
+    if(!snd) {
+        Log(LOG_ERROR, "malloc failed to allocate memory for sound struct\n");
         free(s);
         exit(EXIT_FAILURE);
     }
-    strcpy(snd.file_path, file_path);
-    snd.state = s;
+    snd->file_path = NULL;
+    size_t len = strlen(file_path);
+    snd->file_path = (char*)malloc(len + 1);
+    if(!snd->file_path) {
+        Log(LOG_ERROR, "malloc failed to allocate memory for file_path\n");
+        free(s);
+        free(snd);
+        exit(EXIT_FAILURE);
+    }
+    strcpy(snd->file_path, file_path);
+    snd->state = s;
     return snd;
 }
 
 void sound_load(sound *snd)
 {  
     //!could cause race cond if called after play_sound(...)
+    if(!snd) return;
     if(snd->state->sndFlags & SOUND_WAV_PARSED) return; //!maybe log
     wav_init_file(&snd->state->wav_file);
     if(!wav_parse_file(snd->file_path, &snd->state->wav_file)) {
@@ -106,7 +115,8 @@ void sound_unload(sound *snd)
 {
     if (!snd) return; //!unsafe
     if(!snd->state && !snd->file_path) {
-        Log(LOG_WARNING, "No free needed - Sound wasn't initialized.\n\n");
+        Log(LOG_WARNING, "Only Sound's struct was freed - Sound's state wasn't initialized.\n\n");
+        free(snd);
         return;
     }
     EnterCriticalSection(&snd->state->lock);
@@ -119,15 +129,14 @@ void sound_unload(sound *snd)
         if(refCount == 0) { 
             free(snd->state);
             snd->state = NULL;
+            if (snd->file_path) {
+                free(snd->file_path);
+                snd->file_path = NULL; 
+                Log(LOG_INFO, "Sound's file_path successfully freed!\n\n");
+            }
+            free(snd);
         }
         Log(LOG_INFO, "Sound's state successfully unloaded!\n\n");
-    }
-
-    //?only the main thread uses this so, it's not shared
-    if (snd->file_path) {
-        free(snd->file_path);
-        snd->file_path = NULL; 
-        Log(LOG_INFO, "Sound's file_path successfully freed!\n\n");
     }
 }
 
@@ -238,7 +247,7 @@ static void prepareSoundData(sound* snd) {
         exit(EXIT_FAILURE);//! maybe not, will quit even if i was loading several sound and only one of em failed
     }
 }
-//!potentially unsafe usage lock before use 
+//!potentially unsafe usage lock before use, also redudant code, just add a boolean flag wether to WaitForSingleObject or not
 static void unprepareSoundData(sound* snd) {
     MMRESULT mmres = waveOutReset(snd->state->hWaveOut);
     if(WaveOutOpFailed(mmres, "waveOutUnprepareHeader")) {
@@ -276,7 +285,8 @@ static void unprepareSoundDataInCleanup(sound* snd) {
 static void sound_cleanup_on_fail(sound* snd) {
     if (!snd) return;
     if(!snd->state && !snd->file_path) {
-        Log(LOG_WARNING, "No free needed - Sound wasn't initialized.\n\n");
+        Log(LOG_WARNING, "Only Sound's struct was freed - Sound's state wasn't initialized.\n\n");
+        free(snd);
         return;
     }
     if (snd->state) {
@@ -288,6 +298,11 @@ static void sound_cleanup_on_fail(sound* snd) {
         free(snd->file_path);
         snd->file_path = NULL; 
         Log(LOG_INFO, "Sound's file_path successfully freed!\n\n");
+    }
+    if (snd) {
+        free(snd);
+        snd = NULL; 
+        Log(LOG_INFO, "Sound's struct successfully freed!\n\n");
     }
 }
 
