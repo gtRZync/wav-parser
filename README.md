@@ -36,7 +36,7 @@ int main(int argc, char const *argv[])
 
 int main(int argc, char const *argv[])
 {
-    sound snd = sound_init("resources/sound/bass-wiggle.wav");
+    sound* snd = sound_init("resources/sound/bass-wiggle.wav");
     play_sound(&snd);
 
     // Keep the main thread alive while the sound is playing.
