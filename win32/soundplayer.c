@@ -40,6 +40,7 @@ static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, 
 static void sound_cleanup_on_fail(sound* snd);
 static void sound_ctx_aqcuire(state internal);
 static void sound_ctx_release(state internal);
+static void sound_load(sound *snd);
 static bool WaveOutOpFailed(MMRESULT mmResult, const char* fn_name);
 static void WAVEFORMATEX_HDRinit(const sound* snd);
 static void prepareSoundData(sound* snd);
@@ -91,24 +92,8 @@ sound *sound_init(const char* file_path) {
     }
     strcpy(snd->file_path, file_path);
     snd->state = s;
+    sound_load(snd);
     return snd;
-}
-
-void sound_load(sound *snd)
-{  
-    //!could cause race cond if called after play_sound(...)
-    if(!snd) return;
-    if(snd->state->sndFlags & SOUND_WAV_PARSED) return; //!maybe log
-    wav_init_file(&snd->state->wav_file);
-    if(!wav_parse_file(snd->file_path, &snd->state->wav_file)) {
-        sound_cleanup_on_fail(snd);
-        exit(EXIT_FAILURE);
-    }
-    snd->state->sndFlags |= SOUND_WAV_PARSED;
-    snd->state->hBufferDoneEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    InitializeCriticalSection(&snd->state->lock);
-    WAVEFORMATEX_HDRinit(snd);
-    prepareSoundData(snd);
 }
 
 void sound_unload(sound *snd)
@@ -206,6 +191,23 @@ static void sound_ctx_aqcuire(state internal) {
 
 static void sound_ctx_release(state internal) {
     InterlockedDecrement(&internal->refcount);
+}
+
+static void sound_load(sound *snd)
+{  
+    //!could cause race cond if called after play_sound(...)
+    if(!snd) return;
+    if(snd->state->sndFlags & SOUND_WAV_PARSED) return; //!maybe log
+    wav_init_file(&snd->state->wav_file);
+    if(!wav_parse_file(snd->file_path, &snd->state->wav_file)) {
+        sound_cleanup_on_fail(snd);
+        exit(EXIT_FAILURE);
+    }
+    snd->state->sndFlags |= SOUND_WAV_PARSED;
+    snd->state->hBufferDoneEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    InitializeCriticalSection(&snd->state->lock);
+    WAVEFORMATEX_HDRinit(snd);
+    prepareSoundData(snd);
 }
 
 static bool WaveOutOpFailed(MMRESULT mmResult, const char* fn_name) {
